@@ -57,7 +57,7 @@ class OplusBlurV4Tests(unittest.TestCase):
             result = oplus_blur_v4.apply_breeno_appearance_profile(root, config)
             out = (values / "colors.xml").read_text(encoding="utf-8")
 
-            self.assertIn("#00000000", out)  # root clear
+            self.assertIn("#00000000", out)  # root clear + hard shadow disabled
             self.assertIn("#24FFFFFF", out)  # panel
             self.assertIn("#46FFFFFF", out)  # elevated card
             self.assertIn("#72FFFFFF", out)  # normal key
@@ -65,7 +65,16 @@ class OplusBlurV4Tests(unittest.TestCase):
             self.assertIn("#58FFFFFF", out)  # selected surface
             self.assertIn("#5CFFFFFF", out)  # key edge
             self.assertIn("#1F000000", out)  # control edge
-            self.assertIn("#1A000000", out)  # ambient shadow
+
+            shadow_name = names["ime_skin_key_white_shadow_color"]
+            self.assertIn(
+                f'<color name="{shadow_name}">#00000000</color>',
+                out,
+            )
+            self.assertEqual(
+                oplus_blur_v4.PALETTE["shadow"],
+                {"light": "#00000000", "dark": "#00000000"},
+            )
 
             # Mixed foreground/background token must not be globally repainted.
             self.assertIn(
@@ -104,6 +113,13 @@ class OplusBlurV4Tests(unittest.TestCase):
             "ime_skin_color_btn_green_shadow",
         ):
             self.assertIn(expected, semantics)
+
+        shadow_values = {
+            argb
+            for semantic, role, argb in resolved.values()
+            if role == "shadow"
+        }
+        self.assertEqual(shadow_values, {"#00000000"})
 
         self.assertNotIn("ime_skin_color_14", semantics)
         self.assertNotIn("ime_skin_dark_color_14", semantics)
