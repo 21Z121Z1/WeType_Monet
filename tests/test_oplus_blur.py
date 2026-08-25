@@ -102,13 +102,13 @@ class OplusBlurPatchTests(unittest.TestCase):
         try:
             base_path = root / "smali_classes2/com/tencent/wetype/ime/BaseIme.smali"
             base_path.write_text(
-                '''.class public Lcom/tencent/wetype/ime/BaseIme;\n"
-                ".super Landroid/inputmethodservice/InputMethodService;\n"
+                ".class public Lcom/tencent/wetype/ime/BaseIme;\n"
+                ".super Landroid/inputmethodservice/InputMethodService;\n\n"
                 ".method public install(Landroid/view/View;)V\n"
                 "    .locals 0\n"
                 "    invoke-virtual {p0, p1}, Landroid/inputmethodservice/InputMethodService;->setInputView(Landroid/view/View;)V\n"
                 "    return-void\n"
-                ".end method\n'''.replace('"\n                "', ''),
+                ".end method\n",
                 encoding="utf-8",
             )
             result = oplus_blur.apply_oplus_private_blur(root, config)
