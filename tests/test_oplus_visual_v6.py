@@ -17,10 +17,10 @@ class V6Tests(unittest.TestCase):
             scope.mkdir(parents=True)
             path = scope / "a.smali"
             path.write_text(
-                """.class public La;\n.super Ljava/lang/Object;\n"
+                ".class public La;\n"
+                ".super Ljava/lang/Object;\n"
                 "    invoke-static {p0, p1, p2, p3, p4}, Lcom/tencent/wetype/monet/ColorOSV2Round;->drawRoundRect(Landroid/graphics/Canvas;Landroid/graphics/RectF;FFLandroid/graphics/Paint;)V\n"
-                "    invoke-static {p0, p1, p2, p3}, Lcom/tencent/wetype/monet/ColorOSV2Round;->addRoundRect(Landroid/graphics/Path;Landroid/graphics/RectF;[FLandroid/graphics/Path$Direction;)V\n"
-                """,
+                "    invoke-static {p0, p1, p2, p3}, Lcom/tencent/wetype/monet/ColorOSV2Round;->addRoundRect(Landroid/graphics/Path;Landroid/graphics/RectF;[FLandroid/graphics/Path$Direction;)V\n",
                 encoding="utf-8",
             )
 
@@ -28,7 +28,6 @@ class V6Tests(unittest.TestCase):
             out = path.read_text(encoding="utf-8")
             self.assertEqual(result["calls"], 1)
             self.assertIn("ColorOSV2KeyRoundV6;->drawRoundRect", out)
-            # Per-corner/asymmetric geometry must not be normalized.
             self.assertIn("ColorOSV2Round;->addRoundRect", out)
             self.assertIn("0x3e75c28f", v6.KEY_HELPER_SMALI)
             self.assertEqual(v6.KEY_RADIUS_RATIO, 0.24)
@@ -39,10 +38,9 @@ class V6Tests(unittest.TestCase):
             helper = root / "smali_classes2/com/tencent/wetype/monet/ColorOSV2Round.smali"
             helper.parent.mkdir(parents=True)
             helper.write_text(
-                """.class public Lcom/tencent/wetype/monet/ColorOSV2Round;\n"
+                ".class public Lcom/tencent/wetype/monet/ColorOSV2Round;\n"
                 "    invoke-virtual {p0, v1}, Landroid/graphics/drawable/GradientDrawable;->setCornerRadius(F)V\n"
-                "    invoke-virtual {p0, v5}, Landroid/graphics/drawable/GradientDrawable;->setCornerRadii([F)V\n"
-                """,
+                "    invoke-virtual {p0, v5}, Landroid/graphics/drawable/GradientDrawable;->setCornerRadii([F)V\n",
                 encoding="utf-8",
             )
             visual = {
@@ -66,26 +64,24 @@ class V6Tests(unittest.TestCase):
             monet.mkdir(parents=True)
             listener = monet / "ColorOSV2Round$GlobalLayoutListener.smali"
             listener.write_text(
-                """.class final Lcom/tencent/wetype/monet/ColorOSV2Round$GlobalLayoutListener;\n"
+                ".class final Lcom/tencent/wetype/monet/ColorOSV2Round$GlobalLayoutListener;\n"
                 ".super Ljava/lang/Object;\n"
                 ".method public onGlobalLayout()V\n"
                 "    .locals 1\n"
                 "    invoke-static {v0}, Lcom/tencent/wetype/monet/ColorOSV2Round;->applyTree(Landroid/view/View;)V\n"
                 "    return-void\n"
-                ".end method\n"
-                """,
+                ".end method\n",
                 encoding="utf-8",
             )
             runnable = monet / "OplusKeyboardBlur$ApplyRunnable.smali"
             runnable.write_text(
-                """.class final Lcom/tencent/wetype/monet/OplusKeyboardBlur$ApplyRunnable;\n"
+                ".class final Lcom/tencent/wetype/monet/OplusKeyboardBlur$ApplyRunnable;\n"
                 ".super Ljava/lang/Object;\n"
                 ".method public run()V\n"
                 "    .locals 1\n"
                 "    invoke-static {v0}, Lcom/tencent/wetype/monet/ColorOSV2Round;->install(Landroid/view/View;)V\n"
                 "    return-void\n"
-                ".end method\n"
-                """,
+                ".end method\n",
                 encoding="utf-8",
             )
             visual = {
