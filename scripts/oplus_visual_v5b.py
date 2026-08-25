@@ -3,17 +3,29 @@
 
 Apktool may keep .line/.local directives between an invoke and its move-result.
 The first V5 regex intentionally required adjacency and therefore missed
-WeType's real bundled-font loaders.  This wrapper installs a bytecode-safe,
+WeType's real bundled-font loaders. This wrapper installs a bytecode-safe,
 directive-tolerant font rewriter into the V5 module before running the full
 SystemUI G2/V2 corner + system-font transform.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import re
 from pathlib import Path
 
-import oplus_visual_v5 as base
+try:
+    import oplus_visual_v5 as base
+except ModuleNotFoundError:
+    # Unit tests load this file directly with importlib rather than executing it
+    # from scripts/. Resolve the sibling module explicitly so the transform is
+    # importable in both environments.
+    _BASE_PATH = Path(__file__).resolve().with_name("oplus_visual_v5.py")
+    _BASE_SPEC = importlib.util.spec_from_file_location("oplus_visual_v5", _BASE_PATH)
+    if _BASE_SPEC is None or _BASE_SPEC.loader is None:
+        raise RuntimeError(f"Could not load sibling visual pass: {_BASE_PATH}")
+    base = importlib.util.module_from_spec(_BASE_SPEC)
+    _BASE_SPEC.loader.exec_module(base)
 
 _CUSTOM_FONT_MARKERS = (
     "Landroid/graphics/Typeface;->createFromAsset(",
@@ -37,7 +49,7 @@ def patch_font_factories_directive_tolerant(content: str) -> tuple[str, int]:
     """Replace bundled/custom typeface loaders with Typeface.DEFAULT.
 
     Dalvik requires move-result to follow the invoke in instruction order, but
-    smali debug directives may be printed between the two.  We preserve those
+    smali debug directives may be printed between the two. We preserve those
     directives, replace the invoke with an sget-object into the destination
     register, and remove only the now-invalid move-result instruction.
     """
@@ -47,7 +59,9 @@ def patch_font_factories_directive_tolerant(content: str) -> tuple[str, int]:
     i = 0
     while i < len(lines):
         line = lines[i]
-        if "invoke-static" not in line or not any(marker in line for marker in _CUSTOM_FONT_MARKERS):
+        if "invoke-static" not in line or not any(
+            marker in line for marker in _CUSTOM_FONT_MARKERS
+        ):
             i += 1
             continue
 
@@ -69,7 +83,8 @@ def patch_font_factories_directive_tolerant(content: str) -> tuple[str, int]:
 
         j, match = found
         newline = "\r\n" if line.endswith("\r\n") else "\n"
-        indent = re.match(r"^\s*", line).group(0)
+        indent_match = re.match(r"^\s*", line)
+        indent = indent_match.group(0) if indent_match else ""
         lines[i] = (
             f"{indent}sget-object {match.group('dest')}, "
             "Landroid/graphics/Typeface;->DEFAULT:Landroid/graphics/Typeface;"
@@ -94,5 +109,7 @@ def apply_coloros_v2_visual_profile(
     finally:
         base._patch_font_factories = original
 
-    result["font_patch_engine"] = "directive-tolerant bundled/custom loader replacement"
+    result["font_patch_engine"] = (
+        "directive-tolerant bundled/custom loader replacement"
+    )
     return result
