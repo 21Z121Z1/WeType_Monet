@@ -73,7 +73,6 @@ jobs:
           find analysis/wetype-tool-decoded -path '*/smali*/*.smali' -type f \
             | sed 's#analysis/wetype-tool-decoded/##' \
             | sort > analysis/wetype-tool-smali-files.txt
-          unzip -p analysis/wetype-tool.apk AndroidManifest.xml > /dev/null || true
           sha256sum analysis/wetype-tool.apk > analysis/wetype-tool-apk.sha256
 
       - name: Upload analysis report
