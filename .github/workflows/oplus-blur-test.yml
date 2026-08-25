@@ -10,6 +10,7 @@ on:
       - "scripts/build_oplus_blur_test.py"
       - "scripts/oplus_blur.py"
       - "scripts/oplus_blur_attach_fix.py"
+      - "scripts/oplus_blur_v2.py"
       - "tests/test_oplus_blur*.py"
       - "config/**"
       - "overlay/**"
@@ -43,9 +44,6 @@ jobs:
           sys.path.insert(0, str(Path("tests").resolve()))
           import test_build
 
-          # The upstream test suite hard-codes the upstream repository URLs,
-          # while GitHub exposes this fork as GITHUB_REPOSITORY. Normalize the
-          # imported build module so the pre-existing assertions remain valid.
           test_build.build.REPOSITORY_SLUG = "0x1e93d/WeType_Monet"
           test_build.build.UPDATE_JSON_URL = "https://raw.githubusercontent.com/0x1e93d/WeType_Monet/main/wetype_monet.json"
           test_build.build.KSU_CHANGELOG_URL = "https://raw.githubusercontent.com/0x1e93d/WeType_Monet/main/CHANGELOG.md"
@@ -56,7 +54,7 @@ jobs:
       - name: Run Oplus blur patch tests
         run: python -m unittest discover -s tests -p 'test_oplus_blur*.py' -v
       - name: Check experimental scripts syntax
-        run: python -m py_compile scripts/oplus_blur.py scripts/oplus_blur_attach_fix.py scripts/build_oplus_blur_test.py
+        run: python -m py_compile scripts/oplus_blur.py scripts/oplus_blur_attach_fix.py scripts/oplus_blur_v2.py scripts/build_oplus_blur_test.py
 
   build:
     needs: test
@@ -102,7 +100,7 @@ jobs:
           echo "${BCPROV_SHA256}  /tmp/bcprov.jar" | sha256sum --check --status
           echo "BCPROV_JAR_PATH=/tmp/bcprov.jar" >> "$GITHUB_ENV"
 
-      - name: Build private-blur APK with repository release signature
+      - name: Build ColorOS keyboard-material v2 APK with repository release signature
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: python scripts/build_oplus_blur_test.py
@@ -110,18 +108,18 @@ jobs:
       - name: Verify output APK and certificate
         run: |
           set -euo pipefail
-          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlur_*.apk' -print -quit)"
+          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlurV2_*.apk' -print -quit)"
           test -n "$APK"
-          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-certificate.txt
-          sha256sum "$APK" | tee out/oplus-blur-apk.sha256
+          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-v2-certificate.txt
+          sha256sum "$APK" | tee out/oplus-blur-v2-apk.sha256
 
       - name: Upload test APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: wetype-oplus-private-blur-test
+          name: wetype-oplus-private-blur-v2-test
           if-no-files-found: error
           path: |
-            out/Wetype_Monet_OplusBlur_*.apk
-            out/oplus-blur-build-metadata.json
-            out/oplus-blur-certificate.txt
-            out/oplus-blur-apk.sha256
+            out/Wetype_Monet_OplusBlurV2_*.apk
+            out/oplus-blur-v2-build-metadata.json
+            out/oplus-blur-v2-certificate.txt
+            out/oplus-blur-v2-apk.sha256
