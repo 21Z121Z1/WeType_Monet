@@ -13,7 +13,7 @@ from oplus_blur import apply_oplus_private_blur
 from oplus_blur_attach_fix import make_attachment_safe
 from oplus_blur_v2 import upgrade_to_keyboard_material_v2
 from oplus_blur_v4 import apply_breeno_appearance_profile
-from oplus_visual_v8 import apply_coloros_v2_visual_profile_v8
+from oplus_visual_v8b import apply_coloros_v2_visual_profile_v8
 
 
 def _safe(value: str) -> str:
@@ -147,10 +147,11 @@ def main() -> None:
     )
 
     # V8 includes V5/V6/V7 and then adopts the independently mapped WeType
-    # Tool v1.3.2 lifecycle/resource surfaces.  The actual material remains the
-    # native ColorOS ViewRootManager/OplusBlurParam FAST_KAWASE path.  Full tool
-    # gradients become clear, key press stays self-draw, and panel/candidate
-    # reconciliation becomes event-driven instead of an every-layout tree walk.
+    # Tool v1.3.2 lifecycle/hook surfaces. The actual material remains the
+    # native ColorOS ViewRootManager/OplusBlurParam FAST_KAWASE path. The four
+    # emoji/full-gradient names in Tool are DexKit signatures rather than HLD
+    # resource IDs; V8b therefore uses them only to corroborate painter/class
+    # surfaces while rewriting only resource semantics proven to exist.
     patch_report["visual_v8"] = apply_coloros_v2_visual_profile_v8(
         build.DECOMPILE_DIR, patch_report
     )
@@ -163,7 +164,7 @@ def main() -> None:
         "apk_file": final_apk.name,
         "experiment": (
             "ColorOS keyboard material v8 - native FAST_KAWASE/tint + Breeno hierarchy + "
-            "SystemUI G2/V2 smooth corners + system font + WeType Tool guided exact tool "
+            "SystemUI G2/V2 smooth corners + system font + WeType Tool guided exact hook "
             "surfaces + event-driven panel lifecycle + self-draw Normal/Pressed states"
         ),
         "upstream_version_name": apk_name,
