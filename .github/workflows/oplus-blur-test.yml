@@ -14,8 +14,9 @@ on:
       - "scripts/oplus_blur_v3.py"
       - "scripts/oplus_blur_v4.py"
       - "scripts/oplus_visual_v5.py"
+      - "scripts/oplus_visual_v5b.py"
       - "tests/test_oplus_blur*.py"
-      - "tests/test_oplus_visual_v5.py"
+      - "tests/test_oplus_visual_v5*.py"
       - "config/**"
       - "overlay/**"
       - "signing/**"
@@ -58,7 +59,7 @@ jobs:
       - name: Run Oplus blur patch tests
         run: python -m unittest discover -s tests -p 'test_oplus_blur*.py' -v
       - name: Run ColorOS G2/system-font tests
-        run: python -m unittest discover -s tests -p 'test_oplus_visual_v5.py' -v
+        run: python -m unittest discover -s tests -p 'test_oplus_visual_v5*.py' -v
       - name: Check experimental scripts syntax
         run: >-
           python -m py_compile
@@ -68,6 +69,7 @@ jobs:
           scripts/oplus_blur_v3.py
           scripts/oplus_blur_v4.py
           scripts/oplus_visual_v5.py
+          scripts/oplus_visual_v5b.py
           scripts/build_oplus_blur_test.py
 
   build:
