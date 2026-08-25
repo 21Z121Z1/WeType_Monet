@@ -33,6 +33,8 @@ jobs:
         with:
           python-version: "3.11"
       - name: Run unit tests
+        env:
+          GITHUB_REPOSITORY: 0x1e93d/WeType_Monet
         run: python -m unittest discover -s tests -v
       - name: Check experimental scripts syntax
         run: python -m py_compile scripts/oplus_blur.py scripts/build_oplus_blur_test.py
