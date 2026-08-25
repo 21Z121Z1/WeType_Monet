@@ -20,7 +20,7 @@ Monet container color. The APK exposes, among others:
 WeType does not expose those same view-level blur delegates, so this pass
 reconstructs the same hierarchy with the resources that *are* stable in the
 WeType skin contract: clear root regions, low-alpha panels, elevated cards,
-neutral key/function/selected surfaces, and subtle glass edges/shadows.
+neutral key/function/selected surfaces, and subtle glass edges.
 
 The actual root blur remains the private ColorOS FAST_KAWASE material installed
 by oplus_blur_v2. We deliberately do not guess at per-key View targets here:
@@ -114,7 +114,10 @@ STRUCTURAL_CLEAR_KEYS = {
 
 # Breeno's APK has explicit key radius/shadow machinery. The WeType theme
 # exposes border/shadow tokens, but the original Monet fork zeroed them out.
-# Restore restrained neutral edge contrast instead of reintroducing hue.
+# Keep a restrained neutral edge contrast, but DO NOT restore WeType's shadow
+# resources. On the real 3.5.3 key renderer those tokens are drawn as a hard
+# bottom slab rather than ColorOS-style elevation, producing the visible dark
+# rectangle under every key (V4 regression confirmed on device).
 KEY_EDGE_KEYS = {
     "ime_skin_key_white_border_color",
     "ime_skin_dark_key_white_border_color",
@@ -191,7 +194,9 @@ PALETTE = {
     "selected": {"light": "#58FFFFFF", "dark": "#48FFFFFF"},
     "key_edge": {"light": "#5CFFFFFF", "dark": "#34FFFFFF"},
     "control_edge": {"light": "#1F000000", "dark": "#38FFFFFF"},
-    "shadow": {"light": "#1A000000", "dark": "#26000000"},
+    # WeType's shadow tokens are geometry-bearing bottom strips, not a soft
+    # elevation shadow. Keeping them transparent restores the pre-V4 geometry.
+    "shadow": {"light": "#00000000", "dark": "#00000000"},
 }
 
 
