@@ -10,6 +10,7 @@ from pathlib import Path
 
 import build
 from oplus_blur import apply_oplus_private_blur
+from oplus_blur_attach_fix import make_attachment_safe
 
 
 def _safe(value: str) -> str:
@@ -110,6 +111,7 @@ def main() -> None:
     config_path = build.generate_version_config(sha256_str, apk_code, apk_name, release_date, changelog)
     build.apply_monet_resources(config_path)
     patch_report = apply_oplus_private_blur(build.DECOMPILE_DIR, config_path)
+    patch_report["attachment"] = make_attachment_safe(build.DECOMPILE_DIR, patch_report)
     print("[+] ColorOS private-blur patch report:")
     print(json.dumps(patch_report, ensure_ascii=False, indent=2))
 
