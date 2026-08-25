@@ -9,7 +9,8 @@ on:
       - "scripts/build.py"
       - "scripts/build_oplus_blur_test.py"
       - "scripts/oplus_blur.py"
-      - "tests/test_oplus_blur.py"
+      - "scripts/oplus_blur_attach_fix.py"
+      - "tests/test_oplus_blur*.py"
       - "config/**"
       - "overlay/**"
       - "signing/**"
@@ -53,9 +54,9 @@ jobs:
           raise SystemExit(0 if result.wasSuccessful() else 1)
           PY
       - name: Run Oplus blur patch tests
-        run: python -m unittest discover -s tests -p 'test_oplus_blur.py' -v
+        run: python -m unittest discover -s tests -p 'test_oplus_blur*.py' -v
       - name: Check experimental scripts syntax
-        run: python -m py_compile scripts/oplus_blur.py scripts/build_oplus_blur_test.py
+        run: python -m py_compile scripts/oplus_blur.py scripts/oplus_blur_attach_fix.py scripts/build_oplus_blur_test.py
 
   build:
     needs: test
