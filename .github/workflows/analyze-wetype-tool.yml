@@ -67,12 +67,27 @@ jobs:
             --text analysis/wetype-tool-hook-report.txt
           python -m py_compile scripts/analyze_wetype_tool_release.py
 
+      - name: Preserve focused hook implementation smali
+        run: |
+          set -euo pipefail
+          mkdir -p analysis/wetype-tool-focus
+          PATTERN='keyboardBlurInitMethod|keyboardBlurRootViewField|keyPressBubbleConfigConstructor|keyPressBubbleCornerField|toolbarInvokeMethod|toolbarFunctionField|toolbarCategoryField|candidateBackgroundColorGetter|candidateBackgroundCornerSetter|candidateHolderBindMethod|floatingKeyboardRootAccessorMethod|floatingKeyboardContentAccessorMethod|wetype_keyboard_background_blur_|keyboard_blur_tree|toolbar_background_hook|wetype_floating_keyboard_blur_|WeTypeBlurCarrier_Float|WeTypeBlurHighlight_Float|ime_skin_clipboard_item_bg_color|ime_emoji_keyboard_gradient_bg_color|pressBubble|PressBubble|FloatingBlurSymbols|KeyboardBlurSymbols|CandidateStyleSymbols|ToolbarFields'
+          while IFS= read -r file; do
+            rel="${file#analysis/wetype-tool-decoded/}"
+            mkdir -p "analysis/wetype-tool-focus/$(dirname "$rel")"
+            cp "$file" "analysis/wetype-tool-focus/$rel"
+          done < <(grep -R -l -E "$PATTERN" analysis/wetype-tool-decoded/smali* --include='*.smali' | sort -u)
+          find analysis/wetype-tool-focus -type f -name '*.smali' | sort > analysis/wetype-tool-focus-files.txt
+          test -s analysis/wetype-tool-focus-files.txt
+          echo "focused smali files: $(wc -l < analysis/wetype-tool-focus-files.txt)"
+
       - name: Preserve release metadata and class list
         run: |
           set -euo pipefail
           find analysis/wetype-tool-decoded -path '*/smali*/*.smali' -type f \
             | sed 's#analysis/wetype-tool-decoded/##' \
             | sort > analysis/wetype-tool-smali-files.txt
+          unzip -p analysis/wetype-tool.apk AndroidManifest.xml > /dev/null || true
           sha256sum analysis/wetype-tool.apk > analysis/wetype-tool-apk.sha256
 
       - name: Upload analysis report
@@ -84,4 +99,6 @@ jobs:
             analysis/wetype-tool-hook-report.json
             analysis/wetype-tool-hook-report.txt
             analysis/wetype-tool-smali-files.txt
+            analysis/wetype-tool-focus-files.txt
+            analysis/wetype-tool-focus/**
             analysis/wetype-tool-apk.sha256
