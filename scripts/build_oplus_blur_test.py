@@ -12,7 +12,7 @@ import build
 from oplus_blur import apply_oplus_private_blur
 from oplus_blur_attach_fix import make_attachment_safe
 from oplus_blur_v2 import upgrade_to_keyboard_material_v2
-from oplus_blur_v3 import apply_glass_surface_palette
+from oplus_blur_v4 import apply_breeno_appearance_profile
 
 
 def _safe(value: str) -> str:
@@ -30,7 +30,9 @@ def _force_download_and_decompile():
     finally:
         build.get_latest_build_state = original_get_latest
     if result is None:
-        raise RuntimeError("Forced experimental download/decompile unexpectedly produced no build input")
+        raise RuntimeError(
+            "Forced experimental download/decompile unexpectedly produced no build input"
+        )
     return result
 
 
@@ -38,14 +40,22 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
     _, zipalign, apksigner, _ = build.find_sdk_tools()
     build.ensure_original_package_name()
 
-    unsigned_apk = build.OUT_DIR / "oplus-blur-v3-unsigned.apk"
-    aligned_apk = build.OUT_DIR / "oplus-blur-v3-aligned.apk"
-    final_apk = build.OUT_DIR / f"Wetype_Monet_OplusBlurV3_{_safe(apk_name)}({_safe(apk_code)}).apk"
-    for path in (unsigned_apk, aligned_apk, final_apk, Path(f"{final_apk}.idsig")):
+    unsigned_apk = build.OUT_DIR / "oplus-blur-v4-unsigned.apk"
+    aligned_apk = build.OUT_DIR / "oplus-blur-v4-aligned.apk"
+    final_apk = (
+        build.OUT_DIR
+        / f"Wetype_Monet_OplusBlurV4_{_safe(apk_name)}({_safe(apk_code)}).apk"
+    )
+    for path in (
+        unsigned_apk,
+        aligned_apk,
+        final_apk,
+        Path(f"{final_apk}.idsig"),
+    ):
         if path.exists():
             path.unlink()
 
-    print("[*] Rebuilding ColorOS keyboard-material v3 experiment with apktool...")
+    print("[*] Rebuilding ColorOS/Breeno keyboard-material v4 experiment with apktool...")
     result = subprocess.run(
         ["apktool", "b", str(build.DECOMPILE_DIR), "-o", str(unsigned_apk)],
         capture_output=True,
@@ -56,7 +66,10 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
     if result.returncode != 0:
         raise RuntimeError(f"Apktool rebuild failed:\n{result.stderr or result.stdout}")
 
-    subprocess.run([str(zipalign), "-p", "-f", "4", str(unsigned_apk), str(aligned_apk)], check=True)
+    subprocess.run(
+        [str(zipalign), "-p", "-f", "4", str(unsigned_apk), str(aligned_apk)],
+        check=True,
+    )
     keystore_path = build.prepare_public_signing_keystore()
     subprocess.run(
         [
@@ -96,7 +109,12 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
     )
     print(verify.stdout)
 
-    for path in (unsigned_apk, aligned_apk, Path(f"{final_apk}.idsig"), keystore_path):
+    for path in (
+        unsigned_apk,
+        aligned_apk,
+        Path(f"{final_apk}.idsig"),
+        keystore_path,
+    ):
         if path.exists():
             path.unlink()
     return final_apk, verify.stdout
@@ -107,32 +125,44 @@ def main() -> None:
     build.TARGET_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     build.OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    sha256_str, apk_code, apk_name, release_date, changelog = _force_download_and_decompile()
+    sha256_str, apk_code, apk_name, release_date, changelog = (
+        _force_download_and_decompile()
+    )
     print(f"[+] Upstream WeType: {apk_name} ({apk_code}), sha256={sha256_str}")
 
-    config_path = build.generate_version_config(sha256_str, apk_code, apk_name, release_date, changelog)
+    config_path = build.generate_version_config(
+        sha256_str, apk_code, apk_name, release_date, changelog
+    )
     build.apply_monet_resources(config_path)
 
     # v1 locates the real IME entry point and clears the root panel paints.
     patch_report = apply_oplus_private_blur(build.DECOMPILE_DIR, config_path)
-    patch_report["attachment_v1"] = make_attachment_safe(build.DECOMPILE_DIR, patch_report)
+    patch_report["attachment_v1"] = make_attachment_safe(
+        build.DECOMPILE_DIR, patch_report
+    )
 
-    # v2 is the verified ColorOS private path: FAST_KAWASE + material tint +
-    # smooth corners on a live ViewRootImpl, with delayed reassertion.
-    patch_report["material_v2"] = upgrade_to_keyboard_material_v2(build.DECOMPILE_DIR, patch_report)
+    # v2 is the verified ColorOS private root path: FAST_KAWASE + material tint
+    # + smooth corners on a live ViewRootImpl, with delayed reassertion.
+    patch_report["material_v2"] = upgrade_to_keyboard_material_v2(
+        build.DECOMPILE_DIR, patch_report
+    )
 
-    # v3 removes remaining Monet-painted surface/container/key hues and turns
-    # them into neutral translucent tints over the single root compositor blur.
-    # Emoji/symbol UI stays on the same blur instead of paying for a second blur.
-    patch_report["glass_surfaces_v3"] = apply_glass_surface_palette(build.DECOMPILE_DIR, config_path)
+    # v4 replaces the coarse V3 "all white veils" palette with a role-based
+    # appearance profile reconstructed from Breeno Keyboard 15.17.238. It keeps
+    # the root blur, separates panel/elevated/key/function/selected roles,
+    # restores subtle borders and shadows, and avoids recoloring mixed
+    # foreground/background tokens.
+    patch_report["appearance_v4"] = apply_breeno_appearance_profile(
+        build.DECOMPILE_DIR, config_path
+    )
 
-    print("[+] ColorOS keyboard-material v3 patch report:")
+    print("[+] ColorOS/Breeno keyboard-material v4 patch report:")
     print(json.dumps(patch_report, ensure_ascii=False, indent=2))
 
     final_apk, cert_output = rebuild_and_sign(apk_name, apk_code)
     metadata = {
         "apk_file": final_apk.name,
-        "experiment": "ColorOS keyboard material v3 - neutral glass child surfaces",
+        "experiment": "ColorOS/Breeno keyboard material v4 - layered neutral glass appearance",
         "upstream_version_name": apk_name,
         "upstream_version_code": apk_code,
         "upstream_sha256": sha256_str,
@@ -141,8 +171,11 @@ def main() -> None:
         "patch_report": patch_report,
         "apksigner_verify": cert_output,
     }
-    metadata_path = build.OUT_DIR / "oplus-blur-v3-build-metadata.json"
-    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    metadata_path = build.OUT_DIR / "oplus-blur-v4-build-metadata.json"
+    metadata_path.write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(f"[+] Experimental APK: {final_apk}")
     print(f"[+] Metadata: {metadata_path}")
 
