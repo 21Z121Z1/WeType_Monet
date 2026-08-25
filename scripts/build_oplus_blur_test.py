@@ -13,7 +13,7 @@ from oplus_blur import apply_oplus_private_blur
 from oplus_blur_attach_fix import make_attachment_safe
 from oplus_blur_v2 import upgrade_to_keyboard_material_v2
 from oplus_blur_v4 import apply_breeno_appearance_profile
-from oplus_visual_v5 import apply_coloros_v2_visual_profile
+from oplus_visual_v5b import apply_coloros_v2_visual_profile
 
 
 def _safe(value: str) -> str:
