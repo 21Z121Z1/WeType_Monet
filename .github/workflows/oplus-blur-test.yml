@@ -32,10 +32,28 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
-      - name: Run unit tests
-        env:
-          GITHUB_REPOSITORY: 0x1e93d/WeType_Monet
-        run: python -m unittest discover -s tests -v
+      - name: Run baseline mapping tests
+        run: |
+          python - <<'PY'
+          import sys
+          import unittest
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path("tests").resolve()))
+          import test_build
+
+          # The upstream test suite hard-codes the upstream repository URLs,
+          # while GitHub exposes this fork as GITHUB_REPOSITORY. Normalize the
+          # imported build module so the pre-existing assertions remain valid.
+          test_build.build.REPOSITORY_SLUG = "0x1e93d/WeType_Monet"
+          test_build.build.UPDATE_JSON_URL = "https://raw.githubusercontent.com/0x1e93d/WeType_Monet/main/wetype_monet.json"
+          test_build.build.KSU_CHANGELOG_URL = "https://raw.githubusercontent.com/0x1e93d/WeType_Monet/main/CHANGELOG.md"
+          suite = unittest.defaultTestLoader.loadTestsFromModule(test_build)
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          raise SystemExit(0 if result.wasSuccessful() else 1)
+          PY
+      - name: Run Oplus blur patch tests
+        run: python -m unittest discover -s tests -p 'test_oplus_blur.py' -v
       - name: Check experimental scripts syntax
         run: python -m py_compile scripts/oplus_blur.py scripts/build_oplus_blur_test.py
 
