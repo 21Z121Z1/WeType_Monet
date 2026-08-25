@@ -13,7 +13,7 @@ from oplus_blur import apply_oplus_private_blur
 from oplus_blur_attach_fix import make_attachment_safe
 from oplus_blur_v2 import upgrade_to_keyboard_material_v2
 from oplus_blur_v4 import apply_breeno_appearance_profile
-from oplus_visual_v5b import apply_coloros_v2_visual_profile
+from oplus_visual_v6 import apply_coloros_v2_visual_profile_v6
 
 
 def _safe(value: str) -> str:
@@ -21,9 +21,6 @@ def _safe(value: str) -> str:
 
 
 def _force_download_and_decompile():
-    # Keep the production build's update-state semantics untouched. For this
-    # isolated experiment we only need to force one fresh decode of the latest
-    # upstream APK.
     original_get_latest = build.get_latest_build_state
     build.get_latest_build_state = lambda: None
     try:
@@ -41,11 +38,11 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
     _, zipalign, apksigner, _ = build.find_sdk_tools()
     build.ensure_original_package_name()
 
-    unsigned_apk = build.OUT_DIR / "oplus-blur-v5-unsigned.apk"
-    aligned_apk = build.OUT_DIR / "oplus-blur-v5-aligned.apk"
+    unsigned_apk = build.OUT_DIR / "oplus-blur-v6-unsigned.apk"
+    aligned_apk = build.OUT_DIR / "oplus-blur-v6-aligned.apk"
     final_apk = (
         build.OUT_DIR
-        / f"Wetype_Monet_OplusBlurV5_{_safe(apk_name)}({_safe(apk_code)}).apk"
+        / f"Wetype_Monet_OplusBlurV6_{_safe(apk_name)}({_safe(apk_code)}).apk"
     )
     for path in (
         unsigned_apk,
@@ -56,7 +53,7 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
         if path.exists():
             path.unlink()
 
-    print("[*] Rebuilding ColorOS keyboard-material v5 experiment with apktool...")
+    print("[*] Rebuilding ColorOS keyboard-material v6 experiment with apktool...")
     result = subprocess.run(
         ["apktool", "b", str(build.DECOMPILE_DIR), "-o", str(unsigned_apk)],
         capture_output=True,
@@ -136,41 +133,35 @@ def main() -> None:
     )
     build.apply_monet_resources(config_path)
 
-    # v1 locates the real IME entry point and clears the root panel paints.
     patch_report = apply_oplus_private_blur(build.DECOMPILE_DIR, config_path)
     patch_report["attachment_v1"] = make_attachment_safe(
         build.DECOMPILE_DIR, patch_report
     )
 
-    # v2 is the verified ColorOS private root path: FAST_KAWASE + material tint
-    # + smooth corners on a live ViewRootImpl, with delayed reassertion.
     patch_report["material_v2"] = upgrade_to_keyboard_material_v2(
         build.DECOMPILE_DIR, patch_report
     )
 
-    # v4 keeps the Breeno-derived neutral material hierarchy for root/panel/key
-    # surfaces while avoiding Monet hue on structural keyboard chrome.
     patch_report["appearance_v4"] = apply_breeno_appearance_profile(
         build.DECOMPILE_DIR, config_path
     )
 
-    # v5 replaces keyboard-side ordinary Android circular round-rect drawing
-    # with ColorOS 17 SystemUI's G2/V2 APIs, adapts XML-inflated rounded views
-    # through OplusOutlineAdapter, and forces keyboard TextViews/font factories
-    # back to the current system-default typeface family.
-    patch_report["visual_v5"] = apply_coloros_v2_visual_profile(
+    # V6 contains the V5 ColorOS G2/system-font pass, then applies the four
+    # device-driven fixes: Breeno-like key radius, no hard bottom shadow,
+    # preserved circular toolbar chrome, and proper emoji/base-keyboard z-order.
+    patch_report["visual_v6"] = apply_coloros_v2_visual_profile_v6(
         build.DECOMPILE_DIR, patch_report
     )
 
-    print("[+] ColorOS keyboard-material v5 patch report:")
+    print("[+] ColorOS keyboard-material v6 patch report:")
     print(json.dumps(patch_report, ensure_ascii=False, indent=2))
 
     final_apk, cert_output = rebuild_and_sign(apk_name, apk_code)
     metadata = {
         "apk_file": final_apk.name,
         "experiment": (
-            "ColorOS keyboard material v5 - FAST_KAWASE/tint + Breeno hierarchy + "
-            "SystemUI G2/V2 smooth corners + default system font"
+            "ColorOS keyboard material v6 - FAST_KAWASE/tint + Breeno hierarchy + "
+            "SystemUI G2/V2 smooth corners + system font + device-feedback fixes"
         ),
         "upstream_version_name": apk_name,
         "upstream_version_code": apk_code,
@@ -180,7 +171,7 @@ def main() -> None:
         "patch_report": patch_report,
         "apksigner_verify": cert_output,
     }
-    metadata_path = build.OUT_DIR / "oplus-blur-v5-build-metadata.json"
+    metadata_path = build.OUT_DIR / "oplus-blur-v6-build-metadata.json"
     metadata_path.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
