@@ -84,7 +84,10 @@ jobs:
       - name: Preserve full smali for dependency-closure audit
         run: |
           set -euo pipefail
-          tar -C analysis/wetype-tool-decoded -czf analysis/wetype-tool-full-smali.tar.gz smali*
+          (
+            cd analysis/wetype-tool-decoded
+            tar -czf ../wetype-tool-full-smali.tar.gz smali*
+          )
           test -s analysis/wetype-tool-full-smali.tar.gz
           ls -lh analysis/wetype-tool-full-smali.tar.gz
 
