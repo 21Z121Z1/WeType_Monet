@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - experiment/oplus-private-blur
+      - experiment/oplus-private-blur-v12
     paths:
       - ".github/workflows/oplus-blur-test.yml"
       - "scripts/build.py"
@@ -22,6 +23,7 @@ on:
       - "scripts/oplus_visual_v9.py"
       - "scripts/oplus_visual_v10.py"
       - "scripts/oplus_visual_v11.py"
+      - "scripts/oplus_visual_v12.py"
       - "tests/test_oplus_blur*.py"
       - "tests/test_oplus_visual_v5*.py"
       - "tests/test_oplus_visual_v6.py"
@@ -30,6 +32,7 @@ on:
       - "tests/test_oplus_visual_v9.py"
       - "tests/test_oplus_visual_v10.py"
       - "tests/test_oplus_visual_v11.py"
+      - "tests/test_oplus_visual_v12.py"
       - "config/**"
       - "overlay/**"
       - "signing/**"
@@ -85,6 +88,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_oplus_visual_v10.py' -v
       - name: Run ColorOS V11 voice hotfix tests
         run: python -m unittest discover -s tests -p 'test_oplus_visual_v11.py' -v
+      - name: Run ColorOS V12 WeType Tool local-blur parity tests
+        run: python -m unittest discover -s tests -p 'test_oplus_visual_v12.py' -v
       - name: Check experimental scripts syntax
         run: >-
           python -m py_compile
@@ -102,6 +107,7 @@ jobs:
           scripts/oplus_visual_v9.py
           scripts/oplus_visual_v10.py
           scripts/oplus_visual_v11.py
+          scripts/oplus_visual_v12.py
           scripts/build_oplus_blur_test.py
 
   build:
@@ -148,7 +154,7 @@ jobs:
           echo "${BCPROV_SHA256}  /tmp/bcprov.jar" | sha256sum --check --status
           echo "BCPROV_JAR_PATH=/tmp/bcprov.jar" >> "$GITHUB_ENV"
 
-      - name: Build ColorOS keyboard-material v11 APK with repository release signature
+      - name: Build ColorOS keyboard-material v12 APK with repository release signature
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: python scripts/build_oplus_blur_test.py
@@ -156,18 +162,18 @@ jobs:
       - name: Verify output APK and certificate
         run: |
           set -euo pipefail
-          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlurV11_*.apk' -print -quit)"
+          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlurV12_*.apk' -print -quit)"
           test -n "$APK"
-          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-v11-certificate.txt
-          sha256sum "$APK" | tee out/oplus-blur-v11-apk.sha256
+          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-v12-certificate.txt
+          sha256sum "$APK" | tee out/oplus-blur-v12-apk.sha256
 
       - name: Upload test APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: wetype-oplus-private-blur-v11-test
+          name: wetype-oplus-private-blur-v12-test
           if-no-files-found: error
           path: |
-            out/Wetype_Monet_OplusBlurV11_*.apk
-            out/oplus-blur-v11-build-metadata.json
-            out/oplus-blur-v11-certificate.txt
-            out/oplus-blur-v11-apk.sha256
+            out/Wetype_Monet_OplusBlurV12_*.apk
+            out/oplus-blur-v12-build-metadata.json
+            out/oplus-blur-v12-certificate.txt
+            out/oplus-blur-v12-apk.sha256
