@@ -19,11 +19,13 @@ on:
       - "scripts/oplus_visual_v7.py"
       - "scripts/oplus_visual_v8.py"
       - "scripts/oplus_visual_v8b.py"
+      - "scripts/oplus_visual_v9.py"
       - "tests/test_oplus_blur*.py"
       - "tests/test_oplus_visual_v5*.py"
       - "tests/test_oplus_visual_v6.py"
       - "tests/test_oplus_visual_v7.py"
       - "tests/test_oplus_visual_v8*.py"
+      - "tests/test_oplus_visual_v9.py"
       - "config/**"
       - "overlay/**"
       - "signing/**"
@@ -73,6 +75,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_oplus_visual_v7.py' -v
       - name: Run ColorOS V8 WeType Tool/lifecycle tests
         run: python -m unittest discover -s tests -p 'test_oplus_visual_v8*.py' -v
+      - name: Run ColorOS V9 overlay restoration tests
+        run: python -m unittest discover -s tests -p 'test_oplus_visual_v9.py' -v
       - name: Check experimental scripts syntax
         run: >-
           python -m py_compile
@@ -87,6 +91,7 @@ jobs:
           scripts/oplus_visual_v7.py
           scripts/oplus_visual_v8.py
           scripts/oplus_visual_v8b.py
+          scripts/oplus_visual_v9.py
           scripts/build_oplus_blur_test.py
 
   build:
@@ -133,7 +138,7 @@ jobs:
           echo "${BCPROV_SHA256}  /tmp/bcprov.jar" | sha256sum --check --status
           echo "BCPROV_JAR_PATH=/tmp/bcprov.jar" >> "$GITHUB_ENV"
 
-      - name: Build ColorOS keyboard-material v8 APK with repository release signature
+      - name: Build ColorOS keyboard-material v9 APK with repository release signature
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: python scripts/build_oplus_blur_test.py
@@ -141,18 +146,18 @@ jobs:
       - name: Verify output APK and certificate
         run: |
           set -euo pipefail
-          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlurV8_*.apk' -print -quit)"
+          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlurV9_*.apk' -print -quit)"
           test -n "$APK"
-          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-v8-certificate.txt
-          sha256sum "$APK" | tee out/oplus-blur-v8-apk.sha256
+          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-v9-certificate.txt
+          sha256sum "$APK" | tee out/oplus-blur-v9-apk.sha256
 
       - name: Upload test APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: wetype-oplus-private-blur-v8-test
+          name: wetype-oplus-private-blur-v9-test
           if-no-files-found: error
           path: |
-            out/Wetype_Monet_OplusBlurV8_*.apk
-            out/oplus-blur-v8-build-metadata.json
-            out/oplus-blur-v8-certificate.txt
-            out/oplus-blur-v8-apk.sha256
+            out/Wetype_Monet_OplusBlurV9_*.apk
+            out/oplus-blur-v9-build-metadata.json
+            out/oplus-blur-v9-certificate.txt
+            out/oplus-blur-v9-apk.sha256
