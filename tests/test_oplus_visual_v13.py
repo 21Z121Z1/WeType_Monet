@@ -30,7 +30,6 @@ class V13LocalBlurTests(unittest.TestCase):
         self.assertIn("const/16 v0, 0x5a", text)
         self.assertIn("const/16 v0, 0xff", text)
         self.assertIn("installBubble failed closed", text)
-        # Resource fallback itself stays opaque.
         for semantic, value in v13.V13_KEY_PREVIEW_COLORS.items():
             if semantic.endswith("click_color"):
                 continue
@@ -42,13 +41,19 @@ class V13LocalBlurTests(unittest.TestCase):
         self.assertIn("WeTypeBlurHighlight_Float", text)
         self.assertIn("IdentityHashMap", text)
         self.assertIn("floating blur unavailable; original backgrounds kept", text)
-        set_blur_bg = text.index(
+        start = text.index(".method public static installFloating(Landroid/view/View;)V")
+        end = text.index(".end method", start)
+        install = text[start:end]
+        null_branch = install.index("if-eqz v9, :rollback_carrier")
+        set_blur_bg = install.index(
             "invoke-virtual {v3, v9}, Landroid/view/View;->setBackground"
         )
-        strip = text.index(
+        strip = install.index(
             "->stripBackgrounds(Landroid/view/View;Ljava/util/IdentityHashMap;)V"
         )
+        self.assertLess(null_branch, set_blur_bg)
         self.assertLess(set_blur_bg, strip)
+        self.assertIn(":rollback_carrier", install)
 
     def test_no_high_frequency_local_hooks(self):
         text = v13.LOCAL_HELPER_SMALI
@@ -65,7 +70,7 @@ class V13LocalBlurTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             report = v13.base._patch_bubble_fill_fail_closed(root)
             patched = path.read_text(encoding="utf-8")
-            self.assertIn("fail-closed", report["fill_policy"])
+            self.assertIn("otherwise 0xFF", report["fill_policy"])
             self.assertEqual(patched.count("->applyBubbleFill"), 1)
             self.assertEqual(patched.count("->restoreBubbleStroke"), 1)
 
