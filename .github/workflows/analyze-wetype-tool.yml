@@ -81,6 +81,13 @@ jobs:
           test -s analysis/wetype-tool-focus-files.txt
           echo "focused smali files: $(wc -l < analysis/wetype-tool-focus-files.txt)"
 
+      - name: Preserve full smali for dependency-closure audit
+        run: |
+          set -euo pipefail
+          tar -C analysis/wetype-tool-decoded -czf analysis/wetype-tool-full-smali.tar.gz smali*
+          test -s analysis/wetype-tool-full-smali.tar.gz
+          ls -lh analysis/wetype-tool-full-smali.tar.gz
+
       - name: Preserve release metadata and class list
         run: |
           set -euo pipefail
@@ -93,12 +100,14 @@ jobs:
       - name: Upload analysis report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: wetype-tool-v1.3.2-hook-analysis
+          name: wetype-tool-v1.3.2-deep-analysis
           if-no-files-found: error
+          compression-level: 0
           path: |
             analysis/wetype-tool-hook-report.json
             analysis/wetype-tool-hook-report.txt
             analysis/wetype-tool-smali-files.txt
             analysis/wetype-tool-focus-files.txt
             analysis/wetype-tool-focus/**
+            analysis/wetype-tool-full-smali.tar.gz
             analysis/wetype-tool-apk.sha256
