@@ -13,7 +13,7 @@ from oplus_blur import apply_oplus_private_blur
 from oplus_blur_attach_fix import make_attachment_safe
 from oplus_blur_v2 import upgrade_to_keyboard_material_v2
 from oplus_blur_v4 import apply_breeno_appearance_profile
-from oplus_visual_v9 import apply_coloros_v2_visual_profile_v9
+from oplus_visual_v10 import apply_coloros_v2_visual_profile_v10
 
 
 def _safe(value: str) -> str:
@@ -38,11 +38,11 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
     _, zipalign, apksigner, _ = build.find_sdk_tools()
     build.ensure_original_package_name()
 
-    unsigned_apk = build.OUT_DIR / "oplus-blur-v9-unsigned.apk"
-    aligned_apk = build.OUT_DIR / "oplus-blur-v9-aligned.apk"
+    unsigned_apk = build.OUT_DIR / "oplus-blur-v10-unsigned.apk"
+    aligned_apk = build.OUT_DIR / "oplus-blur-v10-aligned.apk"
     final_apk = (
         build.OUT_DIR
-        / f"Wetype_Monet_OplusBlurV9_{_safe(apk_name)}({_safe(apk_code)}).apk"
+        / f"Wetype_Monet_OplusBlurV10_{_safe(apk_name)}({_safe(apk_code)}).apk"
     )
     for path in (
         unsigned_apk,
@@ -53,7 +53,7 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
         if path.exists():
             path.unlink()
 
-    print("[*] Rebuilding ColorOS keyboard-material v9 experiment with apktool...")
+    print("[*] Rebuilding ColorOS keyboard-material v10 experiment with apktool...")
     result = subprocess.run(
         ["apktool", "b", str(build.DECOMPILE_DIR), "-o", str(unsigned_apk)],
         capture_output=True,
@@ -146,27 +146,25 @@ def main() -> None:
         build.DECOMPILE_DIR, config_path
     )
 
-    # V9 keeps the V8b WeType-Tool-guided event architecture, but fixes the
-    # device-proven state bugs: all full replacement keyboards (including S15
-    # clipboard/common phrase and S31 inspiration) suppress the underlying
-    # self-draw keyboard, and effective visibility/alpha/window callbacks plus
-    # one delayed transition repair guarantee restoration after emoji/tool exit.
-    # There is still no steady-state global-layout tree walk or per-key blur.
-    patch_report["visual_v9"] = apply_coloros_v2_visual_profile_v9(
+    # V10 includes V5-V9, then turns the key press/long-press float root and
+    # ImeVoiceView into transient layered ColorOS blur surfaces. Voice is also
+    # promoted into the full-overlay state set so the underlying self-draw
+    # keyboard and candidate chrome cannot show through it. Local layers do not
+    # own OplusBlurParam and do not reintroduce per-key/global-layout work.
+    patch_report["visual_v10"] = apply_coloros_v2_visual_profile_v10(
         build.DECOMPILE_DIR, patch_report
     )
 
-    print("[+] ColorOS keyboard-material v9 patch report:")
+    print("[+] ColorOS keyboard-material v10 patch report:")
     print(json.dumps(patch_report, ensure_ascii=False, indent=2))
 
     final_apk, cert_output = rebuild_and_sign(apk_name, apk_code)
     metadata = {
         "apk_file": final_apk.name,
         "experiment": (
-            "ColorOS keyboard material v9 - native FAST_KAWASE/tint + Breeno hierarchy + "
+            "ColorOS keyboard material v10 - native FAST_KAWASE/tint + Breeno hierarchy + "
             "SystemUI G2/V2 smooth corners + system font + WeType Tool guided hook surfaces + "
-            "single full-overlay alpha owner + lifecycle-complete transition restoration + "
-            "self-draw Normal/Pressed states"
+            "V9 lifecycle-complete overlay restoration + layered key-preview and voice blur"
         ),
         "upstream_version_name": apk_name,
         "upstream_version_code": apk_code,
@@ -176,7 +174,7 @@ def main() -> None:
         "patch_report": patch_report,
         "apksigner_verify": cert_output,
     }
-    metadata_path = build.OUT_DIR / "oplus-blur-v9-build-metadata.json"
+    metadata_path = build.OUT_DIR / "oplus-blur-v10-build-metadata.json"
     metadata_path.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
