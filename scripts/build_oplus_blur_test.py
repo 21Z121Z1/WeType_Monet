@@ -13,7 +13,7 @@ from oplus_blur import apply_oplus_private_blur
 from oplus_blur_attach_fix import make_attachment_safe
 from oplus_blur_v2 import upgrade_to_keyboard_material_v2
 from oplus_blur_v4 import apply_breeno_appearance_profile
-from oplus_visual_v11 import apply_coloros_v2_visual_profile_v11
+from oplus_visual_v12 import apply_coloros_v2_visual_profile_v12
 
 
 def _safe(value: str) -> str:
@@ -38,11 +38,11 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
     _, zipalign, apksigner, _ = build.find_sdk_tools()
     build.ensure_original_package_name()
 
-    unsigned_apk = build.OUT_DIR / "oplus-blur-v11-unsigned.apk"
-    aligned_apk = build.OUT_DIR / "oplus-blur-v11-aligned.apk"
+    unsigned_apk = build.OUT_DIR / "oplus-blur-v12-unsigned.apk"
+    aligned_apk = build.OUT_DIR / "oplus-blur-v12-aligned.apk"
     final_apk = (
         build.OUT_DIR
-        / f"Wetype_Monet_OplusBlurV11_{_safe(apk_name)}({_safe(apk_code)}).apk"
+        / f"Wetype_Monet_OplusBlurV12_{_safe(apk_name)}({_safe(apk_code)}).apk"
     )
     for path in (
         unsigned_apk,
@@ -53,7 +53,7 @@ def rebuild_and_sign(apk_name: str, apk_code: str) -> tuple[Path, str]:
         if path.exists():
             path.unlink()
 
-    print("[*] Rebuilding ColorOS keyboard-material v11 hotfix with apktool...")
+    print("[*] Rebuilding ColorOS keyboard-material v12 with apktool...")
     result = subprocess.run(
         ["apktool", "b", str(build.DECOMPILE_DIR), "-o", str(unsigned_apk)],
         capture_output=True,
@@ -146,24 +146,23 @@ def main() -> None:
         build.DECOMPILE_DIR, config_path
     )
 
-    # V11 deliberately starts from stable V9. It removes V10's local
-    # ViewRootManager/LayerDrawable experiment, keeps a single root compositor
-    # blur, makes voice a lightweight full-overlay state with only
-    # attach/detach/direct-visibility callbacks, and restores opaque key preview
-    # resources until the actual bubble painter is mapped.
-    patch_report["visual_v11"] = apply_coloros_v2_visual_profile_v11(
+    # V12 keeps V11's stable root/voice state model, then applies WeType Tool's
+    # actual existing-ViewRootImpl BackgroundBlurDrawable pattern to the exact
+    # post-construction key-bubble edge and to reversible floating-keyboard
+    # carrier/highlight layers. No V10 local ViewRootManager owner is restored.
+    patch_report["visual_v12"] = apply_coloros_v2_visual_profile_v12(
         build.DECOMPILE_DIR, patch_report
     )
 
-    print("[+] ColorOS keyboard-material v11 hotfix report:")
+    print("[+] ColorOS keyboard-material v12 report:")
     print(json.dumps(patch_report, ensure_ascii=False, indent=2))
 
     final_apk, cert_output = rebuild_and_sign(apk_name, apk_code)
     metadata = {
         "apk_file": final_apk.name,
         "experiment": (
-            "ColorOS keyboard material v11 hotfix - stable V9 root FAST_KAWASE/tint + "
-            "voice full-overlay suppression without local ViewRootManager + opaque key preview"
+            "ColorOS keyboard material v12 - stable V11 root/voice policy + "
+            "WeType Tool ViewRootImpl local blur for key bubbles + reversible floating carriers"
         ),
         "upstream_version_name": apk_name,
         "upstream_version_code": apk_code,
@@ -173,7 +172,7 @@ def main() -> None:
         "patch_report": patch_report,
         "apksigner_verify": cert_output,
     }
-    metadata_path = build.OUT_DIR / "oplus-blur-v11-build-metadata.json"
+    metadata_path = build.OUT_DIR / "oplus-blur-v12-build-metadata.json"
     metadata_path.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
