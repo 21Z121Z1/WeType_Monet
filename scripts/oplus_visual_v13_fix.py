@@ -8,10 +8,10 @@ View's ViewRootImpl for the drawable and later assigns that drawable to a
 carrier. Apply the same root/target split to V13 local surfaces and add the
 neutral local tint through ViewRootManager.setColor().
 
-This wrapper also fixes the V13 static transaction audit: the previous audit
-searched the whole helper and accidentally matched the stripBackgrounds method
-definition instead of the call inside installFloating(). The corrected audit
-slices that method and verifies control-flow/ordering there.
+The audit intentionally verifies *our injected call sites* instead of banning
+ordinary setAlpha calls already present in WeType's floating implementation.
+V13 itself patches only onAttachedToWindow/onDetachedFromWindow; existing
+animation code is not evidence of a high-frequency V13 hook.
 """
 
 from __future__ import annotations
@@ -39,7 +39,6 @@ if _OLD_FACTORY not in base.LOCAL_HELPER_SMALI:
 
 LOCAL_HELPER_SMALI = base.LOCAL_HELPER_SMALI.replace(_OLD_FACTORY, _NEW_FACTORY, 1)
 
-# Preserve public constants expected by tests/build metadata.
 LOCAL_DESCRIPTOR = base.LOCAL_DESCRIPTOR
 LOCAL_RELATIVE_PATH = base.LOCAL_RELATIVE_PATH
 V13_KEY_PREVIEW_COLORS = base.V13_KEY_PREVIEW_COLORS
@@ -134,8 +133,15 @@ def _audit_v13_fixed(decompile_dir: Path) -> dict[str, object]:
             f"bubble={bubble_calls} fill={fill_calls} stroke={stroke_calls} "
             f"floating={floating_install}/{floating_restore}"
         )
-    if "setAlpha(F)V" in fltext or "onWindowVisibilityChanged(I)V" in fltext:
-        raise RuntimeError("V13 floating target gained a high-frequency lifecycle hook")
+
+    # V13's patcher adds exactly two calls to the floating class: install on
+    # attach and restore on detach. Existing WeType animation calls such as
+    # View.setAlpha are intentionally left untouched and are not V13 hooks.
+    v13_calls = fltext.count(LOCAL_DESCRIPTOR)
+    if v13_calls != 2:
+        raise RuntimeError(
+            f"V13 floating target has unexpected injected call count: {v13_calls}"
+        )
 
     install = _method_slice(
         helper, ".method public static installFloating(Landroid/view/View;)V"
@@ -150,9 +156,6 @@ def _audit_v13_fixed(decompile_dir: Path) -> dict[str, object]:
     rollback_label = install.find(":rollback_carrier")
     if min(null_branch, set_bg, strip, rollback_label) < 0:
         raise RuntimeError("V13 floating transaction markers missing")
-    # Textual order of the rollback label is irrelevant; the conditional branch
-    # jumps over the mutating path. What matters is that success installs the
-    # blur background before any original background is stripped.
     if not (null_branch < set_bg < strip):
         raise RuntimeError("V13 floating transaction ordering invariant failed")
 
@@ -160,11 +163,13 @@ def _audit_v13_fixed(decompile_dir: Path) -> dict[str, object]:
         "bubble_post_N_hook": bubble_calls,
         "bubble_fail_closed_fill_hook": fill_calls,
         "floating_attach_detach_hooks": [floating_install, floating_restore],
+        "floating_total_v13_calls": v13_calls,
         "local_viewroot_manager": True,
         "manager_source": "target.getRootView() with target fallback",
         "hidden_viewrootimpl_reflection": False,
         "local_oplus_blur_param_owner": False,
         "global_layout_scan_added": False,
+        "high_frequency_v13_hooks": False,
         "background_strip_after_blur_success": True,
         "null_blur_branch_preserves_original_backgrounds": True,
     }
