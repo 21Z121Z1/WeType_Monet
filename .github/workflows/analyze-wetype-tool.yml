@@ -81,7 +81,7 @@ jobs:
           test -s analysis/wetype-tool-focus-files.txt
           echo "focused smali files: $(wc -l < analysis/wetype-tool-focus-files.txt)"
 
-      - name: Preserve full smali for dependency-closure audit
+      - name: Preserve full tool smali for dependency-closure audit
         run: |
           set -euo pipefail
           (
@@ -89,7 +89,37 @@ jobs:
             tar -czf ../wetype-tool-full-smali.tar.gz smali*
           )
           test -s analysis/wetype-tool-full-smali.tar.gz
-          ls -lh analysis/wetype-tool-full-smali.tar.gz
+
+      - name: Download and decode matching WeType runtime APK
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            'https://z.weixin.qq.com/android/download?channel=latest' \
+            --output analysis/wetype.apk
+          apktool d -f -r analysis/wetype.apk -o analysis/wetype-decoded
+          grep -q 'versionName: 3.5.3' analysis/wetype-decoded/apktool.yml
+          grep -q "versionCode: '56201'" analysis/wetype-decoded/apktool.yml
+          sha256sum analysis/wetype.apk > analysis/wetype-apk.sha256
+
+      - name: Preserve WeType HLD runtime surfaces
+        run: |
+          set -euo pipefail
+          mkdir -p analysis/wetype-runtime-focus
+          PATTERN='PopupWindow|WindowManager|floatview|ImeVoiceView|voice|Floating|floating|KeyData|pressMaskColor|key_float|ImeRootView|ImeCandidateView|S10SettingCustomToolbarView|setBackground|setBackgroundColor|setOutlineProvider|ViewOutlineProvider|onDraw|dispatchDraw|addView|removeView|getViewRootImpl|createBackgroundBlurDrawable'
+          while IFS= read -r file; do
+            rel="${file#analysis/wetype-decoded/}"
+            mkdir -p "analysis/wetype-runtime-focus/$(dirname "$rel")"
+            cp "$file" "analysis/wetype-runtime-focus/$rel"
+          done < <(grep -R -l -E "$PATTERN" analysis/wetype-decoded/smali*/com/tencent/wetype/plugin/hld --include='*.smali' | sort -u)
+          find analysis/wetype-runtime-focus -type f -name '*.smali' | sort > analysis/wetype-runtime-focus-files.txt
+          test -s analysis/wetype-runtime-focus-files.txt
+          (
+            cd analysis/wetype-decoded
+            find smali* -path '*/com/tencent/wetype/plugin/hld/*.smali' -o -path '*/com/tencent/wetype/plugin/hld/*/*.smali' -o -path '*/com/tencent/wetype/plugin/hld/*/*/*.smali' > ../wetype-hld-files.txt
+            tar -czf ../wetype-hld-smali.tar.gz -T ../wetype-hld-files.txt
+          )
+          test -s analysis/wetype-hld-smali.tar.gz
+          echo "runtime focused smali files: $(wc -l < analysis/wetype-runtime-focus-files.txt)"
 
       - name: Preserve release metadata and class list
         run: |
@@ -97,13 +127,12 @@ jobs:
           find analysis/wetype-tool-decoded -path '*/smali*/*.smali' -type f \
             | sed 's#analysis/wetype-tool-decoded/##' \
             | sort > analysis/wetype-tool-smali-files.txt
-          unzip -p analysis/wetype-tool.apk AndroidManifest.xml > /dev/null || true
           sha256sum analysis/wetype-tool.apk > analysis/wetype-tool-apk.sha256
 
-      - name: Upload analysis report
+      - name: Upload deep parity analysis
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: wetype-tool-v1.3.2-deep-analysis
+          name: wetype-tool-v1.3.2-runtime-parity-analysis
           if-no-files-found: error
           compression-level: 0
           path: |
@@ -114,3 +143,8 @@ jobs:
             analysis/wetype-tool-focus/**
             analysis/wetype-tool-full-smali.tar.gz
             analysis/wetype-tool-apk.sha256
+            analysis/wetype-runtime-focus-files.txt
+            analysis/wetype-runtime-focus/**
+            analysis/wetype-hld-smali.tar.gz
+            analysis/wetype-apk.sha256
+            analysis/wetype-decoded/apktool.yml
