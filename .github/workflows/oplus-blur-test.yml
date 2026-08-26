@@ -8,6 +8,7 @@ on:
       - experiment/oplus-private-blur-v13
       - experiment/oplus-private-blur-v14
       - experiment/oplus-private-blur-v15
+      - experiment/oplus-private-blur-v16
     paths:
       - ".github/workflows/oplus-blur-test.yml"
       - "scripts/build.py"
@@ -32,6 +33,7 @@ on:
       - "scripts/oplus_visual_v13_final.py"
       - "scripts/oplus_visual_v14.py"
       - "scripts/oplus_visual_v15.py"
+      - "scripts/oplus_visual_v16.py"
       - "tests/test_oplus_blur*.py"
       - "tests/test_oplus_visual_v5*.py"
       - "tests/test_oplus_visual_v6.py"
@@ -44,6 +46,7 @@ on:
       - "tests/test_oplus_visual_v13.py"
       - "tests/test_oplus_visual_v14.py"
       - "tests/test_oplus_visual_v15.py"
+      - "tests/test_oplus_visual_v16.py"
       - "config/**"
       - "overlay/**"
       - "signing/**"
@@ -107,6 +110,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_oplus_visual_v14.py' -v
       - name: Run ColorOS V15 material/geometry tests
         run: python -m unittest discover -s tests -p 'test_oplus_visual_v15.py' -v
+      - name: Run ColorOS V16 SystemUI corner-policy tests
+        run: python -m unittest discover -s tests -p 'test_oplus_visual_v16.py' -v
       - name: Check experimental scripts syntax
         run: >-
           python -m py_compile
@@ -130,6 +135,7 @@ jobs:
           scripts/oplus_visual_v13_final.py
           scripts/oplus_visual_v14.py
           scripts/oplus_visual_v15.py
+          scripts/oplus_visual_v16.py
           scripts/build_oplus_blur_test.py
 
   build:
@@ -176,7 +182,7 @@ jobs:
           echo "${BCPROV_SHA256}  /tmp/bcprov.jar" | sha256sum --check --status
           echo "BCPROV_JAR_PATH=/tmp/bcprov.jar" >> "$GITHUB_ENV"
 
-      - name: Build ColorOS keyboard-material v15 APK with repository release signature
+      - name: Build ColorOS keyboard-material v16 APK with repository release signature
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: python scripts/build_oplus_blur_test.py
@@ -184,18 +190,18 @@ jobs:
       - name: Verify output APK and certificate
         run: |
           set -euo pipefail
-          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlurV15_*.apk' -print -quit)"
+          APK="$(find out -maxdepth 1 -type f -name 'Wetype_Monet_OplusBlurV16_*.apk' -print -quit)"
           test -n "$APK"
-          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-v15-certificate.txt
-          sha256sum "$APK" | tee out/oplus-blur-v15-apk.sha256
+          apksigner verify --verbose --print-certs "$APK" | tee out/oplus-blur-v16-certificate.txt
+          sha256sum "$APK" | tee out/oplus-blur-v16-apk.sha256
 
       - name: Upload test APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: wetype-oplus-private-blur-v15-test
+          name: wetype-oplus-private-blur-v16-test
           if-no-files-found: error
           path: |
-            out/Wetype_Monet_OplusBlurV15_*.apk
-            out/oplus-blur-v15-build-metadata.json
-            out/oplus-blur-v15-certificate.txt
-            out/oplus-blur-v15-apk.sha256
+            out/Wetype_Monet_OplusBlurV16_*.apk
+            out/oplus-blur-v16-build-metadata.json
+            out/oplus-blur-v16-certificate.txt
+            out/oplus-blur-v16-apk.sha256
