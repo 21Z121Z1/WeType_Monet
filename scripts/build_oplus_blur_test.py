@@ -13,7 +13,7 @@ from oplus_blur import apply_oplus_private_blur
 from oplus_blur_attach_fix import make_attachment_safe
 from oplus_blur_v2 import upgrade_to_keyboard_material_v2
 from oplus_blur_v4 import apply_breeno_appearance_profile
-from oplus_visual_v13_fix import apply_coloros_v2_visual_profile_v13
+from oplus_visual_v13_final import apply_coloros_v2_visual_profile_v13
 
 
 def _safe(value: str) -> str:
@@ -144,11 +144,6 @@ def main() -> None:
         build.DECOMPILE_DIR, config_path
     )
 
-    # V13 keeps the exact WeType Tool hook surfaces/carrier topology from V12,
-    # but replaces Xposed-only hidden ViewRootImpl reflection with the same
-    # ColorOS ViewRootManager(root) -> BackgroundBlurDrawable path already
-    # proven on this standalone APK/device. Bubble tint is fail-closed and
-    # floating background stripping is transactional.
     patch_report["visual_v13"] = apply_coloros_v2_visual_profile_v13(
         build.DECOMPILE_DIR, patch_report
     )
