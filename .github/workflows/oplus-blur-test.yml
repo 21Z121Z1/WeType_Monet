@@ -27,6 +27,7 @@ on:
       - "scripts/oplus_visual_v12.py"
       - "scripts/oplus_visual_v13.py"
       - "scripts/oplus_visual_v13_fix.py"
+      - "scripts/oplus_visual_v13_final.py"
       - "tests/test_oplus_blur*.py"
       - "tests/test_oplus_visual_v5*.py"
       - "tests/test_oplus_visual_v6.py"
@@ -116,6 +117,7 @@ jobs:
           scripts/oplus_visual_v12.py
           scripts/oplus_visual_v13.py
           scripts/oplus_visual_v13_fix.py
+          scripts/oplus_visual_v13_final.py
           scripts/build_oplus_blur_test.py
 
   build:
