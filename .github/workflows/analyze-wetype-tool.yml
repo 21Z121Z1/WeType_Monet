@@ -90,15 +90,14 @@ jobs:
           )
           test -s analysis/wetype-tool-full-smali.tar.gz
 
-      - name: Download and decode matching WeType runtime APK
+      - name: Download and decode current WeType runtime APK
         run: |
           set -euo pipefail
           curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
             'https://z.weixin.qq.com/android/download?channel=latest' \
             --output analysis/wetype.apk
           apktool d -f -r analysis/wetype.apk -o analysis/wetype-decoded
-          grep -q 'versionName: 3.5.3' analysis/wetype-decoded/apktool.yml
-          grep -q "versionCode: '56201'" analysis/wetype-decoded/apktool.yml
+          cat analysis/wetype-decoded/apktool.yml | grep -E 'versionCode|versionName' | tee analysis/wetype-version.txt
           sha256sum analysis/wetype.apk > analysis/wetype-apk.sha256
 
       - name: Preserve WeType HLD runtime surfaces
@@ -115,7 +114,7 @@ jobs:
           test -s analysis/wetype-runtime-focus-files.txt
           (
             cd analysis/wetype-decoded
-            find smali* -path '*/com/tencent/wetype/plugin/hld/*.smali' -o -path '*/com/tencent/wetype/plugin/hld/*/*.smali' -o -path '*/com/tencent/wetype/plugin/hld/*/*/*.smali' > ../wetype-hld-files.txt
+            find smali* -type f -path '*/com/tencent/wetype/plugin/hld/*.smali' -o -type f -path '*/com/tencent/wetype/plugin/hld/*/*.smali' -o -type f -path '*/com/tencent/wetype/plugin/hld/*/*/*.smali' > ../wetype-hld-files.txt
             tar -czf ../wetype-hld-smali.tar.gz -T ../wetype-hld-files.txt
           )
           test -s analysis/wetype-hld-smali.tar.gz
@@ -147,4 +146,5 @@ jobs:
             analysis/wetype-runtime-focus/**
             analysis/wetype-hld-smali.tar.gz
             analysis/wetype-apk.sha256
+            analysis/wetype-version.txt
             analysis/wetype-decoded/apktool.yml
